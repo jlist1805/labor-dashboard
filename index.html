@@ -1033,7 +1033,7 @@ function hireQualityHTML(){
     `<div class="card" style="border-top:3px solid ${RED}"><div class="card-label">Exits â‰¤6 Months</div><div class="card-value" style="color:${RED}">80</div><div class="card-sub">Early departures</div><div class="card-footer"><div style="font-size:11px;color:var(--muted)">Within 6 months of hire</div></div></div>`+
     `<div class="card" style="border-top:3px solid #CA8A04"><div class="card-label">Early Turnover</div><div class="card-value" style="color:#CA8A04">20.46%</div><div class="card-sub">Exits / Hires</div><div class="card-footer"><div style="font-size:11px;color:var(--muted)">6-month hire cohort</div></div></div>`+
     `<div class="card" style="border-top:3px solid ${GREEN}"><div class="card-label">Hire Quality</div><div class="card-value" style="color:${GREEN}">79.54%</div><div class="card-sub">Retained within 6m</div><div class="card-footer"><div style="font-size:11px;color:var(--muted)">Higher is better</div></div></div>`;
-  const rows=HQDATA.map(r=>`<tr>
+  const rows=HQDATA.slice().sort((a,b)=>a.et-b.et).map(r=>`<tr>
     <td style="font-weight:500">${r.cc}</td>
     <td style="text-align:right;font-weight:600">${r.h}</td>
     <td style="text-align:right;color:${r.e>0?RED:"var(--muted)"};font-weight:${r.e>0?700:400}">${r.e}</td>
