@@ -1033,7 +1033,7 @@ function hireQualityHTML(){
     "<div class=\"card\" style=\"border-top:3px solid "+RED+"\"><div class=\"card-label\">Exits &le;6 Months</div><div class=\"card-value\" style=\"color:"+RED+"\">80</div><div class=\"card-sub\">Early departures</div><div class=\"card-footer\"><div style=\"font-size:11px;color:var(--muted)\">Within 6 months of hire</div></div></div>"+
     "<div class=\"card\" style=\"border-top:3px solid #CA8A04\"><div class=\"card-label\">Early Turnover</div><div class=\"card-value\" style=\"color:#CA8A04\">20.46%</div><div class=\"card-sub\">Exits / Hires</div><div class=\"card-footer\"><div style=\"font-size:11px;color:var(--muted)\">6-month hire cohort</div></div></div>"+
     "<div class=\"card\" style=\"border-top:3px solid "+GREEN+"\"><div class=\"card-label\">Hire Quality</div><div class=\"card-value\" style=\"color:"+GREEN+"\">79.54%</div><div class=\"card-sub\">Retained within 6m</div><div class=\"card-footer\"><div style=\"font-size:11px;color:var(--muted)\">Higher is better</div></div></div>";
-  var sorted=HQDATA.slice().sort(function(a,b){return a.et-b.et;});
+  var sorted=HQDATA.slice().sort(function(a,b){return b.et-a.et;});
   var rows=sorted.map(function(r){
     return "<tr>"+
       "<td style=\"font-weight:500\">"+r.cc+"</td>"+
@@ -1045,7 +1045,7 @@ function hireQualityHTML(){
   }).join("");
   return "<div style=\"grid-column:1/-1\">"+
     "<div class=\"section-title\" style=\"border-left-color:"+ORANGE+"\">&#11088; Hire Quality &mdash; Last 6 Months (Oct 2025 &ndash; Apr 2026)</div>"+
-    "<div style=\"font-size:12px;color:var(--muted);margin:-8px 0 14px 0\">Counts hires from the last 6 months and tracks how many have since left. <strong style=\"color:var(--text)\">Green &ge; 80%</strong>, <strong style=\"color:#CA8A04\">Amber 60&ndash;80%</strong>, <strong style=\"color:"+RED+"\">Red &lt; 60%</strong>. Sorted by early turnover (lowest to highest).</div>"+
+    "<div style=\"font-size:12px;color:var(--muted);margin:-8px 0 14px 0\">Counts hires from the last 6 months and tracks how many have since left. <strong style=\"color:var(--text)\">Green &ge; 80%</strong>, <strong style=\"color:#CA8A04\">Amber 60&ndash;80%</strong>, <strong style=\"color:"+RED+"\">Red &lt; 60%</strong>. Sorted by early turnover (highest to lowest).</div>"+
     "<div class=\"cards\" style=\"margin-bottom:20px\">"+cards+"</div>"+
     "<div style=\"border:1px solid var(--border);border-radius:8px;overflow:hidden\">"+
       "<div style=\"max-height:580px;overflow-y:auto\">"+
