@@ -483,6 +483,11 @@ function _opsCCToggle(f3){
   window._opsCCExp[f3]=!window._opsCCExp[f3];
   render();
 }
+function _opsCCF2Toggle(f2){
+  if(!window._opsCCF2Exp)window._opsCCF2Exp={};
+  window._opsCCF2Exp[f2]=!window._opsCCF2Exp[f2];
+  render();
+}
 function _hqCatToggle(key){
   if(!window._hqCatExp)window._hqCatExp={};
   window._hqCatExp[key]=!window._hqCatExp[key];
@@ -554,62 +559,94 @@ function hqCCTableHTML(title,accent,grpRows,ttmKeys,pttmKeys,activeVal){
     ${body}
   </div>`;
 }
-function opsCCTableHTML(title,accent,grpRows,ttmKeys,pttmKeys,activeVal){
+function opsCCTableHTML(title,accent,grpRows,ttmKeys,pttmKeys,activeCC,activeF3,activeF2){
   if(!window._tableOpen)window._tableOpen={};
+  if(!window._opsCCF2Exp)window._opsCCF2Exp={};
   if(!window._opsCCExp)window._opsCCExp={};
   const tid="ops_cc";
   const isOpen=tid in window._tableOpen?window._tableOpen[tid]:true;
-  const f3vals=[...new Set(grpRows.map(r=>r["F3"]).filter(Boolean))].sort();
-  const groupData=f3vals.map(f3=>{
-    const gr=grpRows.filter(r=>r["F3"]===f3);
-    const ttmPct=parseFloat(calcTurnover(gr,ttmKeys));
-    const pttmPct=parseFloat(calcTurnover(gr,pttmKeys));
+  const f2order=US_REGIONS.filter(f2=>grpRows.some(r=>r["F2"]===f2));
+  const regionData=f2order.map(f2=>{
+    const f2Rows=grpRows.filter(r=>r["F2"]===f2);
+    const ttmPct=parseFloat(calcTurnover(f2Rows,ttmKeys));
+    const pttmPct=parseFloat(calcTurnover(f2Rows,pttmKeys));
     if(ttmPct===0&&pttmPct===0)return null;
     const delta=(ttmPct-pttmPct).toFixed(1);
-    const avgHC=avgMonthlyHC(gr,ttmKeys);
-    const detail=buildCompData(gr,"Cost Center",null,ttmKeys,pttmKeys,false)
-      .filter(r=>r.label&&r.label.trim()!=="")
-      .filter(r=>parseFloat(r.ttmPct)>0||parseFloat(r.pttmPct)>0)
-      .map(r=>({...r,label:r.label.includes(" - ")?r.label.split(" - ").slice(1).join(" - "):r.label}));
-    return{label:f3,ttmPct:ttmPct.toFixed(1),pttmPct:pttmPct.toFixed(1),delta,avgHC,detail};
-  }).filter(Boolean).sort((a,b)=>parseFloat(b.delta)-parseFloat(a.delta));
+    const avgHC=avgMonthlyHC(f2Rows,ttmKeys);
+    const dispLabel=RLABEL[f2]||f2;
+    const f3vals=[...new Set(f2Rows.map(r=>r["F3"]).filter(Boolean))].sort();
+    const districts=f3vals.map(f3=>{
+      const f3Rows=f2Rows.filter(r=>r["F3"]===f3);
+      const f3Ttm=parseFloat(calcTurnover(f3Rows,ttmKeys));
+      const f3Pttm=parseFloat(calcTurnover(f3Rows,pttmKeys));
+      if(f3Ttm===0&&f3Pttm===0)return null;
+      const f3Delta=(f3Ttm-f3Pttm).toFixed(1);
+      const f3AvgHC=avgMonthlyHC(f3Rows,ttmKeys);
+      const ccs=buildCompData(f3Rows,"Cost Center",null,ttmKeys,pttmKeys,false)
+        .filter(r=>r.label&&r.label.trim()!=="")
+        .filter(r=>parseFloat(r.ttmPct)>0||parseFloat(r.pttmPct)>0)
+        .map(r=>({...r,label:r.label.includes(" - ")?r.label.split(" - ").slice(1).join(" - "):r.label}));
+      return{label:f3,ttmPct:f3Ttm.toFixed(1),pttmPct:f3Pttm.toFixed(1),delta:f3Delta,avgHC:f3AvgHC,ccs};
+    }).filter(Boolean).sort((a,b)=>parseFloat(b.delta)-parseFloat(a.delta));
+    const ccCount=districts.reduce((s,d)=>s+d.ccs.length,0);
+    return{f2,dispLabel,ttmPct:ttmPct.toFixed(1),pttmPct:pttmPct.toFixed(1),delta,avgHC,districts,ccCount};
+  }).filter(Boolean);
   let rowsHtml="";
-  groupData.forEach(row=>{
-    const up=parseFloat(row.delta)>0;
-    const exp=window._opsCCExp[row.label]||false;
-    const isGroupActive=drill&&drill.field==="F3"&&drill.value===row.label;
-    const f3Key="'"+row.label.replace(/'/g,"\\\'")+"'";
-    rowsHtml+=`<tr class="${isGroupActive?"active-row":""}" data-field="F3" data-label="${row.label.replace(/"/g,"&quot;")}">
-      <td style="font-weight:700;color:${accent};cursor:pointer">
-        <span onclick="event.stopPropagation();_opsCCToggle(${f3Key})" style="display:inline-block;background:${exp?"#1A1A2E":"#FF5F00"};color:#fff;border-radius:3px;width:20px;height:16px;font-size:9px;font-weight:900;cursor:pointer;margin-right:7px;vertical-align:middle;text-align:center;line-height:16px;user-select:none">${exp?"&#9660;":"&#9658;"}</span>
-        ${isGroupActive?'<span style="margin-right:4px;color:#FF5F00">&#9658;</span>':''}${row.label}
-        <span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:4px">(${row.detail.length})</span>
+  regionData.forEach(reg=>{
+    const up=parseFloat(reg.delta)>0;
+    const f2Exp=window._opsCCF2Exp[reg.f2]||false;
+    const isF2Active=activeF2===reg.f2;
+    const f2Esc=reg.f2.replace(/'/g,"\\'");
+    rowsHtml+=`<tr class="${isF2Active?"active-row":""}" data-field="F2" data-label="${reg.f2.replace(/"/g,"&quot;")}">
+      <td style="font-weight:800;color:${accent};cursor:pointer">
+        <span onclick="event.stopPropagation();_opsCCF2Toggle('${f2Esc}')" style="display:inline-block;background:${f2Exp?"#1A1A2E":"#FF5F00"};color:#fff;border-radius:3px;width:20px;height:16px;font-size:9px;font-weight:900;cursor:pointer;margin-right:7px;vertical-align:middle;text-align:center;line-height:16px;user-select:none">${f2Exp?"&#9660;":"&#9658;"}</span>
+        ${isF2Active?'<span style="margin-right:4px;color:#FF5F00">&#9658;</span>':''}${reg.dispLabel}
+        <span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:4px">(${reg.ccCount})</span>
       </td>
-      <td style="text-align:right;font-weight:700">${row.ttmPct}%</td>
-      <td style="text-align:right;color:var(--muted)">${row.pttmPct}%</td>
-      <td style="text-align:right;font-weight:700;color:${up?RED:GREEN};white-space:nowrap">${up?"&#9650;":"&#9660;"} ${fmt1(Math.abs(row.delta))}pp</td>
-      <td style="text-align:right;color:${NAVY};font-weight:600">${row.avgHC.toLocaleString()}</td>
+      <td style="text-align:right;font-weight:800">${reg.ttmPct}%</td>
+      <td style="text-align:right;color:var(--muted)">${reg.pttmPct}%</td>
+      <td style="text-align:right;font-weight:800;color:${up?RED:GREEN};white-space:nowrap">${up?"&#9650;":"&#9660;"} ${fmt1(Math.abs(reg.delta))}pp</td>
+      <td style="text-align:right;color:${NAVY};font-weight:700">${reg.avgHC.toLocaleString()}</td>
     </tr>`;
-    if(exp){
-      row.detail.forEach(sub=>{
-        const subUp=parseFloat(sub.delta)>0;
-        const isActive=sub.label===activeVal;
-        rowsHtml+=`<tr class="${isActive?"active-row":""}" data-field="Cost Center" data-label="${sub.label.replace(/"/g,"&quot;")}">
-          <td style="padding-left:28px;font-size:11px;color:var(--text);border-left:3px solid ${accent}30">
-            ${isActive?'<span style="margin-right:4px;color:#FF5F00">&#9658;</span>':''}${sub.label}
+    if(f2Exp){
+      reg.districts.forEach(dist=>{
+        const distUp=parseFloat(dist.delta)>0;
+        const distExp=window._opsCCExp[dist.label]||false;
+        const isDistActive=activeF3===dist.label;
+        const f3Esc=dist.label.replace(/'/g,"\\'");
+        rowsHtml+=`<tr class="${isDistActive?"active-row":""}" data-field="F3" data-label="${dist.label.replace(/"/g,"&quot;")}">
+          <td style="font-weight:700;color:${accent};cursor:pointer;padding-left:18px">
+            <span onclick="event.stopPropagation();_opsCCToggle('${f3Esc}')" style="display:inline-block;background:${distExp?"#1A1A2E":"#FF5F00"};color:#fff;border-radius:3px;width:20px;height:16px;font-size:9px;font-weight:900;cursor:pointer;margin-right:7px;vertical-align:middle;text-align:center;line-height:16px;user-select:none">${distExp?"&#9660;":"&#9658;"}</span>
+            ${isDistActive?'<span style="margin-right:4px;color:#FF5F00">&#9658;</span>':''}${dist.label}
+            <span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:4px">(${dist.ccs.length})</span>
           </td>
-          <td style="text-align:right;font-size:11px">${sub.ttmPct}%</td>
-          <td style="text-align:right;font-size:11px;color:var(--muted)">${sub.pttmPct}%</td>
-          <td style="text-align:right;font-size:11px;font-weight:600;color:${subUp?RED:GREEN};white-space:nowrap">${subUp?"&#9650;":"&#9660;"} ${fmt1(Math.abs(sub.delta))}pp</td>
-          <td style="text-align:right;font-size:11px;color:${NAVY};font-weight:500">${sub.avgHC.toLocaleString()}</td>
+          <td style="text-align:right;font-weight:700">${dist.ttmPct}%</td>
+          <td style="text-align:right;color:var(--muted)">${dist.pttmPct}%</td>
+          <td style="text-align:right;font-weight:700;color:${distUp?RED:GREEN};white-space:nowrap">${distUp?"&#9650;":"&#9660;"} ${fmt1(Math.abs(dist.delta))}pp</td>
+          <td style="text-align:right;color:${NAVY};font-weight:600">${dist.avgHC.toLocaleString()}</td>
         </tr>`;
+        if(distExp){
+          dist.ccs.forEach(sub=>{
+            const subUp=parseFloat(sub.delta)>0;
+            const isActive=sub.label===activeCC;
+            rowsHtml+=`<tr class="${isActive?"active-row":""}" data-field="Cost Center" data-label="${sub.label.replace(/"/g,"&quot;")}">
+              <td style="padding-left:44px;font-size:11px;color:var(--text);border-left:3px solid ${accent}30">
+                ${isActive?'<span style="margin-right:4px;color:#FF5F00">&#9658;</span>':''}${sub.label}
+              </td>
+              <td style="text-align:right;font-size:11px">${sub.ttmPct}%</td>
+              <td style="text-align:right;font-size:11px;color:var(--muted)">${sub.pttmPct}%</td>
+              <td style="text-align:right;font-size:11px;font-weight:600;color:${subUp?RED:GREEN};white-space:nowrap">${subUp?"&#9650;":"&#9660;"} ${fmt1(Math.abs(sub.delta))}pp</td>
+              <td style="text-align:right;font-size:11px;color:${NAVY};font-weight:500">${sub.avgHC.toLocaleString()}</td>
+            </tr>`;
+          });
+        }
       });
     }
   });
-  const toggleBtn=`<button onclick="toggleTable('${tid}')" style="font-size:11px;font-weight:700;color:${accent};background:transparent;border:1px solid ${accent};padding:3px 10px;border-radius:6px;cursor:pointer;white-space:nowrap">${isOpen?"&#9650; Collapse":"&#9660; Expand"} (${groupData.length})</button>`;
+  const toggleBtn=`<button onclick="toggleTable('${tid}')" style="font-size:11px;font-weight:700;color:${accent};background:transparent;border:1px solid ${accent};padding:3px 10px;border-radius:6px;cursor:pointer;white-space:nowrap">${isOpen?"&#9650; Collapse":"&#9660; Expand"} (${regionData.length})</button>`;
   const body=isOpen
     ?`<table><thead><tr>${["","TTM %","PTTM %","&Delta; (pp)","Avg TTM HC"].map((h,i)=>`<th style="text-align:${i===0?"left":"right"}">${h}</th>`).join("")}</tr></thead><tbody>${rowsHtml}</tbody></table>`
-    :`<div style="font-size:11px;color:var(--muted);margin-top:8px">${groupData.length} groups &mdash; click Expand to view</div>`;
+    :`<div style="font-size:11px;color:var(--muted);margin-top:8px">${regionData.length} regions &mdash; click Expand to view</div>`;
   return`<div class="table-card" style="border-top:3px solid ${accent}">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${isOpen?12:0}px">
       <div class="section-title" style="border-left-color:${accent};margin-bottom:0">${title}</div>
@@ -619,6 +656,7 @@ function opsCCTableHTML(title,accent,grpRows,ttmKeys,pttmKeys,activeVal){
   </div>`;
 }
 // ─────────────────────────────────────────────────────────────────────────────
+
 function buildCompData(rows,field,filterFn,ttmKeys,pttmKeys,excludeZero=false){
   const filtered=filterFn?rows.filter(filterFn):rows;
   const groups=[...new Set(filtered.map(r=>r[field]))].filter(Boolean).sort();
@@ -740,7 +778,7 @@ function render(){
   const pttmAvgHC=avgMonthlyHC(drilledRows,pttmKeys);
   const curLabel=curKey?`${MONTHS[(curKey%100)-1]} ${Math.floor(curKey/100)}`:"—";
   const regionLabel=group==="OPS"&&region?` \u00B7 ${region}`:"";
-  const drillLabel=drill?drill.value:"";
+  const drillLabel=drill?(drill.field==="F2"?(RLABEL[drill.value]||drill.value):drill.value):"";
   // Sparklines (last 6 months)
   const sparkKeys=allSortedKeys.slice(-6);
   const getM=f=>sparkKeys.map(k=>drilledRows.filter(r=>getDateKey(r)===k).reduce((s,r)=>s+n(r[f]),0));
@@ -808,6 +846,7 @@ function render(){
   const aReg=drill&&drill.field==="Region"?(RLABEL[RLABEL_INV[drill.value]]||drill.value):null;
   const aF3=drill&&drill.field==="F3"?drill.value:null;
   const aJob=drill&&drill.field==="Job Position Title"?drill.value:null;
+  const aF2=drill&&drill.field==="F2"?drill.value:null;
   const aCC=drill&&drill.field==="Cost Center"?drill.value:null;
   const aCat=drill&&drill.field==="cat"?drill.value:null;
   let tablesHtml="";
@@ -820,10 +859,10 @@ function render(){
                tableHTML("OPS Regional Breakdown \u2014 TTM vs PTTM",ORANGE,reg,"Region",aReg);
   } else if(group==="HQ"||group==="SSC"){
     const jp=buildCompData(drilledRows,"Job Position Title",null,ttmKeys,pttmKeys,true);
-    tablesHtml=hqCCTableHTML(`Category \u2014 ${group} TTM vs PTTM`,gc,grpRows,ttmKeys,pttmKeys,aCC)+
+    tablesHtml=hqCCTableHTML(`Category \u2014 ${group} TTM vs PTTM`,gc,grpRows,ttmKeys,pttmKeys,aCC,aF3,aF2)+
                tableHTML(`Job Profile \u2014 ${group} TTM vs PTTM`,gc,jp,"Job Position Title",aJob,true,"hq_jp");
   } else if(group==="OPS"){
-    tablesHtml=opsCCTableHTML(`Cost Center \u2014 OPS${regionLabel} TTM vs PTTM`,gc,grpRows,ttmKeys,pttmKeys,aCC)+
+    tablesHtml=opsCCTableHTML(`Cost Center \u2014 OPS${regionLabel} TTM vs PTTM`,gc,grpRows,ttmKeys,pttmKeys,aCC,aF3,aF2)+
                opsJpTableHTML(`Job Profile \u2014 OPS${regionLabel} TTM vs PTTM`,gc,drilledRows,ttmKeys,pttmKeys,aJob);
   }
   document.getElementById("comp-tables").innerHTML=tablesHtml;
