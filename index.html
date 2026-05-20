@@ -819,12 +819,12 @@ function render(){
     tablesHtml=tableHTML("Business Area Comparison \u2014 TTM vs PTTM",NAVY,ba,"Business Area",aBA)+
                tableHTML("OPS Regional Breakdown \u2014 TTM vs PTTM",ORANGE,reg,"Region",aReg);
   } else if(group==="HQ"||group==="SSC"){
-    const jp=buildCompData(allRows,"Job Position Title",r=>r["Business Area"]===group,ttmKeys,pttmKeys,true);
+    const jp=buildCompData(drilledRows,"Job Position Title",null,ttmKeys,pttmKeys,true);
     tablesHtml=hqCCTableHTML(`Category \u2014 ${group} TTM vs PTTM`,gc,grpRows,ttmKeys,pttmKeys,aCC)+
                tableHTML(`Job Profile \u2014 ${group} TTM vs PTTM`,gc,jp,"Job Position Title",aJob,true,"hq_jp");
   } else if(group==="OPS"){
     tablesHtml=opsCCTableHTML(`Cost Center \u2014 OPS${regionLabel} TTM vs PTTM`,gc,grpRows,ttmKeys,pttmKeys,aCC)+
-               opsJpTableHTML(`Job Profile \u2014 OPS${regionLabel} TTM vs PTTM`,gc,grpRows,ttmKeys,pttmKeys,aJob);
+               opsJpTableHTML(`Job Profile \u2014 OPS${regionLabel} TTM vs PTTM`,gc,drilledRows,ttmKeys,pttmKeys,aJob);
   }
   document.getElementById("comp-tables").innerHTML=tablesHtml;
   document.querySelectorAll("#comp-tables tbody tr").forEach(tr=>{
