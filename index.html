@@ -667,7 +667,7 @@ function buildCompData(rows,field,filterFn,ttmKeys,pttmKeys,excludeZero=false){
     const delta=(ttmPct-pttmPct).toFixed(1);
     const avgHC=avgMonthlyHC(gr,ttmKeys);
     return{label:g,ttmPct:ttmPct.toFixed(1),pttmPct:pttmPct.toFixed(1),delta,avgHC};
-  }).filter(r=>!excludeZero||parseFloat(r.pttmPct)>0).sort((a,b)=>parseFloat(b.delta)-parseFloat(a.delta));
+  }).filter(r=>!excludeZero||(parseFloat(r.ttmPct)>0||parseFloat(r.pttmPct)>0)).sort((a,b)=>parseFloat(b.delta)-parseFloat(a.delta));
 }
 
 // Cards
