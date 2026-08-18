@@ -977,16 +977,17 @@ function ccSearch(q){
   dd.innerHTML=hits.map(function(c){
     var escaped=_escHtml(c.label);
     var meta=(c.code?c.code+" &middot; ":"")+c.ba+(c.f2?" &middot; "+c.f2:"");
-    return "<div class=\"search-item\" data-cc-label=\""+escaped+"\" onmousedown=\"handleCCMousedown(event)\"><div class=\"search-item-name\">"+_escHtml(c.name)+"</div><div class=\"search-item-meta\">"+meta+"</div></div>";
+    return "<div class=\"search-item\" data-cc-label=\""+escaped+"\" data-cc-ba=\""+_escHtml(c.ba)+"\" onmousedown=\"handleCCMousedown(event)\"><div class=\"search-item-name\">"+_escHtml(c.name)+"</div><div class=\"search-item-meta\">"+meta+"</div></div>";
   }).join("");
   dd.style.display="block";
 }
 function handleCCMousedown(e){
   e.preventDefault();
   var label=e.currentTarget.getAttribute("data-cc-label");
+  var ba=e.currentTarget.getAttribute("data-cc-ba")||"OPS";
   document.getElementById("cc-search-input").value="";
   hideCCDropdown();
-  group="All";drill={field:"Cost Center",value:label};region=null;
+  group=ba;drill={field:"Cost Center",value:label};region=null;
   render();
 }
 function hideCCDropdown(){var dd=document.getElementById("cc-search-dropdown");if(dd)dd.style.display="none";}
