@@ -85,6 +85,17 @@ body.dark .dash-footer{background:#0c1124;}
   .grid2{grid-template-columns:1fr;}
   .header{padding:10px 14px;}
   .content{padding:12px;}}
+.search-bar{display:flex;align-items:center;gap:10px;padding:7px 20px;background:var(--card);border-bottom:1px solid var(--border);}
+.search-wrap{position:relative;width:300px;}
+.search-input{width:100%;padding:6px 12px 6px 32px;border:1px solid var(--border);border-radius:20px;background:var(--bg);color:var(--text);font-size:13px;outline:none;box-sizing:border-box;}
+.search-input:focus{border-color:#FF5F00;box-shadow:0 0 0 2px rgba(255,95,0,.12);}
+.search-icon-abs{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none;}
+.search-dropdown{display:none;position:absolute;top:calc(100% + 4px);left:0;width:360px;background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.18);z-index:999;max-height:280px;overflow-y:auto;}
+.search-item{padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);}
+.search-item:last-child{border-bottom:none;}
+.search-item:hover{background:rgba(255,95,0,.08);}
+.search-item-name{font-weight:600;font-size:13px;color:var(--text);}
+.search-item-meta{font-size:11px;color:var(--muted);margin-top:1px;}
 </style>
 </head>
 <body>
@@ -122,6 +133,16 @@ body.dark .dash-footer{background:#0c1124;}
       <button class="icon-btn" onclick="showExportMenu(event)">&#11015; Export</button>
       <button class="new-file-btn" onclick="resetDashboard()">&#8593; New File</button>
     </div>
+  </div>
+  <div id="search-bar" class="search-bar" style="display:none">
+    <div class="search-wrap">
+      <span class="search-icon-abs">&#128269;</span>
+      <input type="text" id="cc-search-input" class="search-input" placeholder="Search branch / cost center..." autocomplete="off"
+        oninput="ccSearch(this.value)" onblur="setTimeout(hideCCDropdown,200)"
+        onkeydown="if(event.key==='Escape'){this.value='';hideCCDropdown();}if(event.key==='Enter'){var f=document.getElementById('cc-search-dropdown').querySelector('.search-item');if(f)f.dispatchEvent(new MouseEvent('mousedown',{bubbles:true}));}">
+      <div id="cc-search-dropdown" class="search-dropdown"></div>
+    </div>
+    <span style="font-size:11px;color:var(--muted)">Type to jump to any branch &mdash; press Enter or click to filter</span>
   </div>
   <div id="region-bar" style="display:none" class="region-bar">
     <span style="font-size:12px;color:#FFB380">Region:</span>
@@ -921,11 +942,54 @@ function setGroup(g){group=g;drill=null;region=null;render();}
 function setRegion(r){region=r;drill=null;render();}
 function clearDrill(){drill=null;render();}
 function resetDashboard(){
-  allRows=[];group="All";region=null;drill=null;
+  allRows=[];group="All";region=null;drill=null;_ccIdx=null;
   if(chartInst){chartInst.destroy();chartInst=null;}
+  document.getElementById("search-bar").style.display="none";
   document.getElementById("dashboard").style.display="none";
   document.getElementById("upload-screen").style.display="flex";
 }
+// ── Branch Search ─────────────────────────────────────────────────────────────
+var _ccIdx=null;
+function buildCCIdx(){
+  if(_ccIdx)return _ccIdx;
+  var seen={};
+  allRows.forEach(function(r){
+    var raw=r["Cost Center"]||"";
+    if(!raw||seen[raw])return;
+    var label=raw.includes(" - ")?raw.split(" - ").slice(1).join(" - "):raw;
+    if(seen[label])return;
+    var ni=label.lastIndexOf(" - ");
+    var name=ni>0?label.substring(ni+3):label;
+    var code=label.includes(" - ")?label.split(" - ")[0]:"";
+    seen[label]={label:label,name:name,code:code,ba:r["Business Area"]||"OPS",f2:r["F2"]||""};
+  });
+  _ccIdx=Object.values(seen).sort(function(a,b){return a.name.localeCompare(b.name);});
+  return _ccIdx;
+}
+function _escHtml(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function ccSearch(q){
+  var dd=document.getElementById("cc-search-dropdown");
+  if(!q||q.length<2){dd.style.display="none";return;}
+  var idx=buildCCIdx();
+  var ql=q.toLowerCase();
+  var hits=idx.filter(function(c){return c.label.toLowerCase().includes(ql)||c.name.toLowerCase().includes(ql);}).slice(0,12);
+  if(!hits.length){dd.style.display="none";return;}
+  dd.innerHTML=hits.map(function(c){
+    var escaped=_escHtml(c.label);
+    var meta=(c.code?c.code+" &middot; ":"")+c.ba+(c.f2?" &middot; "+c.f2:"");
+    return "<div class=\"search-item\" data-cc-label=\""+escaped+"\" onmousedown=\"handleCCMousedown(event)\"><div class=\"search-item-name\">"+_escHtml(c.name)+"</div><div class=\"search-item-meta\">"+meta+"</div></div>";
+  }).join("");
+  dd.style.display="block";
+}
+function handleCCMousedown(e){
+  e.preventDefault();
+  var label=e.currentTarget.getAttribute("data-cc-label");
+  document.getElementById("cc-search-input").value="";
+  hideCCDropdown();
+  group="All";drill={field:"Cost Center",value:label};region=null;
+  render();
+}
+function hideCCDropdown(){var dd=document.getElementById("cc-search-dropdown");if(dd)dd.style.display="none";}
 function handleFile(file){
   if(!file)return;
   const reader=new FileReader();
@@ -933,9 +997,10 @@ function handleFile(file){
     try{
       const parsed=parseCSV(e.target.result);
       if(!parsed.length){showErr("No rows parsed. Check your file.");return;}
-      allRows=parsed;
+      allRows=parsed;_ccIdx=null;
       document.getElementById("upload-screen").style.display="none";
       document.getElementById("dashboard").style.display="block";
+      document.getElementById("search-bar").style.display="flex";
       render();
     }catch(err){showErr("Parse error. Save as CSV UTF-8 from Excel and retry.");}
   };
@@ -992,6 +1057,7 @@ function expandRow(r){return{"Date Month":r.dm,"Business Area":r.ba,"Business Ar
   const ACCT_CCS=new Set(["41855","41856","47246","48678","48679"]);allRows=EDATA.map(expandRow).map(r=>{if(r["cat"]==="CFO - Accounting/Finance"){const cc=(r["Cost Center"]||"").split(" - ")[0].trim();r["cat"]=ACCT_CCS.has(cc)?"CFO - Accounting":"CFO - Finance";}return r;});
   document.getElementById("upload-screen").style.display="none";
   document.getElementById("dashboard").style.display="block";
+  document.getElementById("search-bar").style.display="flex";
   render();
 })();
 
